@@ -4,7 +4,6 @@ from openai import OpenAI
 
 app = FastAPI()
 
-# Подключение к Timeweb Cloud
 client = OpenAI(
     api_key=os.getenv("DEEPSEEK_API_KEY"),
     base_url="https://api.timeweb.ai/v1"
@@ -19,7 +18,7 @@ async def main(request: Request):
     
     try:
         response = client.chat.completions.create(
-            model="deepseek/deepseek-v4.1-flash",  # Правильное имя модели
+            model="deepseek/deepseek-v4-flash",  # Правильный ID модели
             messages=[{"role": "user", "content": user_text}],
             timeout=4
         )
