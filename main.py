@@ -19,7 +19,7 @@ async def main(request: Request):
     
     try:
         response = client.chat.completions.create(
-            model="deepseek/deepseek-v4-flash",  # Идентификатор модели из панели Timeweb
+            model="deepseek/deepseek-v4.1-flash",  # Правильное имя модели
             messages=[{"role": "user", "content": user_text}],
             timeout=4
         )
