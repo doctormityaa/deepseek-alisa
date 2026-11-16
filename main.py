@@ -1,46 +1,37 @@
 import os
 from fastapi import FastAPI, Request
-import requests
+from openai import OpenAI
 
 app = FastAPI()
 
-# Адрес API Timeweb Cloud (с добавленным /chat/completions)
-API_URL = "https://api.timeweb.ai/v1/chat/completions"
-# Ключ берется из настроек Render (переменная DEEPSEEK_API_KEY)
-API_KEY = os.getenv("DEEPSEEK_API_KEY")
+# Инициализируем клиент OpenAI для работы с Timeweb Cloud
+client = OpenAI(
+    api_key=os.getenv("DEEPSEEK_API_KEY"),
+    base_url="https://api.timeweb.ai/v1"  # Базовый URL из документации Timeweb
+)
 
 @app.post("/")
 async def main(request: Request):
     body = await request.json()
     
     # 1. Безопасно извлекаем текст вопроса от Алисы
-    # Если original_utterance нет, берем command. Если нет и его - пишем "Привет"
     req_data = body.get("request", {})
     user_text = req_data.get("original_utterance") or req_data.get("command", "Привет")
     
-    # 2. Готовим запрос к Timeweb
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "model": "deepseek/deepseek-v4-flash",  # Точное имя модели из Timeweb
-        "messages": [
-            {"role": "user", "content": user_text}
-        ]
-    }
-
-    # 3. Отправляем запрос и обрабатываем ответ
+    # 2. Отправляем запрос через официальную библиотеку
     try:
-        # Ставим таймаут 4 секунды (Алиса дает 4.5 сек на ответ)
-        response = requests.post(API_URL, headers=headers, json=payload, timeout=4)
-        response.raise_for_status() # Проверяем на ошибки сервера
-        answer = response.json()["choices"][0]["message"]["content"]
+        # Используем модель, которую вы создали в Timeweb Cloud
+        response = client.chat.completions.create(
+            model="deepseek/deepseek-chat",  # или "deepseek/deepseek-v4-flash"
+            messages=[{"role": "user", "content": user_text}],
+            timeout=4  # Алиса ждёт 4.5 секунды, ставим 4 для запаса
+        )
+        answer = response.choices[0].message.content
     except Exception as e:
-        # Если Timeweb не ответил или произошла ошибка - Алиса скажет эту фразу
-        answer = "Извините, нейросеть временно недоступна. Попробуйте позже."
+        # Если произошла ошибка, выводим её текст в ответе для диагностики
+        answer = f"Ошибка: {str(e)}"
 
-    # 4. Отдаем ответ Алисе в правильном формате
+    # 3. Отдаём ответ Алисе в правильном формате
     return {
         "version": body.get("version", "1.0"),
         "session": body.get("session", {}),
